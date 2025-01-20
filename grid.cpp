@@ -53,7 +53,7 @@ public:
 // Example main function to test the grid
 int main() {
     try {
-        Grid grid("grid_data.bin");
+        Grid grid("grid_state.bin");
         
         // Print dimensions
         std::cout << "Grid dimensions: " << grid.getRows() << "x" << grid.getCols() << std::endl;
@@ -69,4 +69,4 @@ int main() {
         return 1;
     }
     return 0;
-} `
+} 

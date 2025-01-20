@@ -104,6 +104,8 @@ class GridWorld:
         ]
         self.button_texts = ["New Grid", "Dijkstra's"]
 
+        self.path = []  # Store the path here
+
     def draw_grid(self):
         # Draw cells
         for y in range(self.grid.rows):
@@ -117,6 +119,13 @@ class GridWorld:
                 cell_state = self.grid.grid[y, x]
                 pygame.draw.rect(self.screen, self.colors[cell_state], cell_rect)
                 
+        # Draw path if it exists
+        for node in self.path:
+            path_x, path_y = node
+            path_circle_x = path_x * self.cell_size + self.cell_size // 2
+            path_circle_y = path_y * self.cell_size + self.cell_size // 2
+            pygame.draw.circle(self.screen, (0, 191, 255), (path_circle_x, path_circle_y), self.cell_size // 4)
+
         # Draw grid lines
         for x in range(0, self.width, self.cell_size):
             pygame.draw.line(self.screen, self.grid_color, (x, 0), (x, self.height))
@@ -156,6 +165,7 @@ class GridWorld:
                     self.grid.player_pos = self.grid.get_random_pos()
                     self.grid.goal_pos = self.grid.get_random_pos()
                     self.grid.update_grid_state()
+                    self.path = []  # Clear the path when a new grid is generated
                     #self.print_grid()
                 elif self.buttons[1].collidepoint(mouse_pos):
                     print("Dijkstra's button clicked")
@@ -166,9 +176,9 @@ class GridWorld:
                         'goal': self.grid.goal_pos
                     }
                     # Pass the dictionary as a single argument
-                    path = dijkstras(grid_data)
-                    if path:
-                        print(f"Path found: {path}")
+                    self.path = dijkstras(grid_data)  # Store the path
+                    if self.path:
+                        print(f"Path found: {self.path}")
                     else:
                         print("No path found!")
                     
