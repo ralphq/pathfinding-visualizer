@@ -1,30 +1,62 @@
-#include <boost/iostreams/device/mapped_file.hpp>
 #include <stdexcept>
 #include <string>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 
 class Grid {
 private:
-    boost::iostreams::mapped_file_source mmap;
-    const double* data;
+    std::ifstream file; // Declare an ifstream to read from CSV
+    double* data;
     size_t rows;
     size_t cols;
 
 public:
     Grid(const std::string& filename) {
-        // Open and map the file
-        mmap.open(filename);
-        if (!mmap.is_open()) {
+        // Open the CSV file
+        std::ifstream file(filename);
+        if (!file.is_open()) {
             throw std::runtime_error("Cannot open file: " + filename);
         }
 
-        // First 2 size_t values in the file are rows and cols
-        const size_t* header = reinterpret_cast<const size_t*>(mmap.data());
-        rows = header[0];
-        cols = header[1];
+        // Initialize row and column counts
+        rows = 0;
+        cols = 0;
 
-        // Data starts after the header
-        data = reinterpret_cast<const double*>(mmap.data() + 2 * sizeof(size_t));
+        std::string line;
+        // Count rows and determine the number of columns
+        while (std::getline(file, line)) {
+            if (rows == 0) {
+                std::istringstream rowStream(line);
+                std::string value;
+                while (std::getline(rowStream, value, ',')) {
+                    cols++; // Count columns based on commas
+                }
+            }
+            rows++; // Increment row count
+        }
+
+        // Allocate memory for data
+        data = new double[rows * cols];
+
+        // Reset file stream to read data again
+        file.clear();
+        file.seekg(0);
+
+        // Read the data into the array
+        size_t i = 0;
+        while (std::getline(file, line) && i < rows) {
+            std::istringstream rowStream(line);
+            for (size_t j = 0; j < cols; ++j) {
+                if (!(rowStream >> data[i * cols + j])) {
+                    throw std::runtime_error("Error reading data at row " + std::to_string(i));
+                }
+                rowStream.ignore(); // Ignore the comma
+            }
+            ++i;
+        }
+
+        file.close();
     }
 
     // Basic row-major access
@@ -53,7 +85,7 @@ public:
 // Example main function to test the grid
 int main() {
     try {
-        Grid grid("grid_state.bin");
+        Grid grid("grid_state.csv");  // Changed to read from CSV file
         
         // Print dimensions
         std::cout << "Grid dimensions: " << grid.getRows() << "x" << grid.getCols() << std::endl;

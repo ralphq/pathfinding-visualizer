@@ -176,34 +176,27 @@ class GridWorld:
                         'goal': self.grid.goal_pos
                     }
                     # Pass the dictionary as a single argument
-                    self.path = dijkstras(grid_data)  # Store the path
-                    if self.path:
-                        print(f"Path found: {self.path}")
-                    else:
-                        print("No path found!")
-                    
+                    # self.path = dijkstras(grid_data)  # Store the path
+                    # if self.path:
+                    #     print(f"Path found: {self.path}")
+                    # else:
+                    #     print("No path found!")
+
                     # You can keep the existing binary save/subprocess code if needed
-                    self.save_to_binary('grid_state.bin')
+                    self.save_to_csv('grid_state.csv')
                     import subprocess
                     import os
                     
-                    # Get the current directory and construct full path to grid.exe
+                    # Get the current directory and construct full path to pathfinding.exe
                     current_dir = os.path.dirname(os.path.abspath(__file__))
-                    exe_path = os.path.join(current_dir, 'grid.exe')
-                    
-                    # Debug prints
-                    # print(f"Current working directory: {os.getcwd()}")
-                    # print(f"Script directory: {current_dir}")
-                    # print(f"Looking for executable at: {exe_path}")
-                    # print(f"File exists: {os.path.exists(exe_path)}")
-                    # print(f"Directory contents: {os.listdir(current_dir)}")
+                    exe_path = os.path.join(current_dir, 'pathfinding.exe')
                     
                     try:
                         subprocess.run([exe_path], check=True)
                     except subprocess.CalledProcessError as e:
-                        print(f"Error running grid.exe: {e}")
+                        print(f"Error running pathfinding.exe: {e}")
                     except FileNotFoundError:
-                        print(f"grid.exe not found at: {exe_path}")
+                        print(f"pathfinding.exe not found at: {exe_path}")
         
         if current_time - self.last_move_time < self.move_cooldown:
             return
@@ -268,14 +261,10 @@ class GridWorld:
                 print(f'{self.grid.grid[y,x]:2} ', end='')  # Added consistent spacing
             print()  # newline
 
-    def save_to_binary(self, filename):
-        """Save the current grid state to a binary file."""
-        # Save to binary file
-        with open(filename, 'wb') as f:
-            # Write header (rows and cols)
-            np.array([self.grid.rows, self.grid.cols], dtype=np.uint64).tofile(f)
-            # Write data
-            self.grid.grid.astype(np.float64).tofile(f)
+    def save_to_csv(self, filename):
+        """Save the current grid state to a CSV file."""
+        # Save to CSV file
+        np.savetxt(filename, self.grid.grid, delimiter=",", fmt='%d')
 
     def load_from_binary(self, filename):
         """Load grid state from a binary file."""

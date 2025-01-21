@@ -1,0 +1,130 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <queue>
+#include <limits>
+#include <sstream>
+
+using namespace std;
+
+
+void dijkstra(const vector<vector<int>>& grid, int start, int end) {
+    int rows = grid.size();
+    int cols = grid[0].size();
+    vector<vector<int> > dist(rows, vector<int>(cols, numeric_limits<int>::max()));
+    vector<vector<bool> > visited(rows, vector<bool>(cols, false));
+    priority_queue<pair<int, pair<int, int> >, vector<pair<int, pair<int, int> > >, greater<pair<int, pair<int, int> > > > pq;
+    vector<vector<pair<int, int>>> prev(rows, vector<pair<int, int>>(cols, {-1, -1})); // To store the path
+
+    // Convert start and end from 1D to 2D coordinates
+    int startRow = start / cols; // Ensure start is within bounds
+    int startCol = start % cols; // Ensure start is within bounds
+    int endRow = end / cols; // Ensure end is within bounds
+    int endCol = end % cols; // Ensure end is within bounds
+
+    // Check if start and end are valid
+    if (grid[startRow][startCol] == 1 || grid[endRow][endCol] == 1) {
+        cout << "Invalid start or end position!" << endl;
+        return;
+    }
+
+    dist[startRow][startCol] = 0;
+    pq.push({0, {startRow, startCol}});
+
+    vector<pair<int, int> > directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+
+    while (!pq.empty()) {
+        auto [currentDist, current] = pq.top();
+        pq.pop();
+        int x = current.first;
+        int y = current.second;
+
+        if (visited[x][y]) continue;
+        visited[x][y] = true;
+
+        // If we reached the end node
+        if (x == endRow && y == endCol) {
+            cout << "Shortest path distance: " << currentDist << endl;
+
+            // Reconstruct the path
+            vector<pair<int, int>> path;
+            for (pair<int, int> at = {endRow, endCol}; at != make_pair(-1, -1); at = prev[at.first][at.second]) {
+                path.push_back(at);
+            }
+            reverse(path.begin(), path.end());
+
+            cout << "Path: ";
+            for (const auto& p : path) {
+                cout << "(" << p.first << ", " << p.second << ") ";
+            }
+            cout << endl;
+
+            return;
+        }
+
+        for (const auto& dir : directions) {
+            int newX = x + dir.first;
+            int newY = y + dir.second;
+
+            if (newX >= 0 && newX < rows && newY >= 0 && newY < cols && grid[newX][newY] != 1) {
+                int newDist = currentDist + 1; // Assuming each step has a cost of 1
+                if (newDist < dist[newX][newY]) {
+                    dist[newX][newY] = newDist;
+                    pq.push({newDist, {newX, newY}});
+                    prev[newX][newY] = {x, y}; // Store the previous node
+                }
+            }
+        }
+    }
+
+    cout << "No path found!" << endl;
+}
+
+int main() {
+    // Load grid from CSV
+    ifstream file("grid_state.csv");
+    string line;
+    vector<vector<int>> grid;
+
+    while (getline(file, line)) {
+        stringstream ss(line);
+        string cell;
+        vector<int> row;
+        while (getline(ss, cell, ',')) {
+            row.push_back(stoi(cell));
+        }
+        grid.push_back(row);
+    }
+
+    int startNode = -1; // Starting node index
+    int endNode = -1;   // Ending node index
+
+    // Find the indices of the elements with values 3 and 2
+    for (int i = 0; i < grid.size(); ++i) {
+        for (int j = 0; j < grid[i].size(); ++j) {
+            if (grid[i][j] == 3) {
+                startNode = i * grid[i].size() + j; // Convert to single index
+            }
+            if (grid[i][j] == 2) {
+                endNode = i * grid[i].size() + j; // Convert to single index
+            }
+        }
+    }
+
+    // Check if startNode and endNode were found
+    if (startNode == -1 || endNode == -1) {
+        cout << "Start or end node not found!" << endl;
+        return 1;
+    }
+
+    // Check if startNode and endNode are within the grid bounds
+    if (startNode < 0 || startNode >= grid.size() * grid[0].size() || 
+        endNode < 0 || endNode >= grid.size() * grid[0].size()) {
+        cout << "Start or end node is out of bounds!" << endl;
+        return 1;
+    }
+
+    dijkstra(grid, startNode, endNode);
+
+    return 0;
+}
