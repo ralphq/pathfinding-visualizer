@@ -59,6 +59,18 @@ void dijkstra(const vector<vector<int>>& grid, int start, int end) {
             }
             cout << endl;
 
+            // Save path to CSV
+            ofstream outFile("path.csv"); // Open a file to save the path
+            if (outFile.is_open()) {
+                for (const auto& p : path) {
+                    outFile << p.first << "," << p.second << endl; // Write each coordinate to the file
+                }
+                outFile.close(); // Close the file
+                cout << "Path saved to path.csv" << endl; // Confirmation message
+            } else {
+                cout << "Unable to open file for writing!" << endl; // Error handling
+            }
+
             return;
         }
 

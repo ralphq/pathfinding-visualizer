@@ -169,20 +169,7 @@ class GridWorld:
                     #self.print_grid()
                 elif self.buttons[1].collidepoint(mouse_pos):
                     print("Dijkstra's button clicked")
-                    # Create a dictionary with the required parameters
-                    grid_data = {
-                        'grid': self.grid.grid.tolist(),
-                        'start': self.grid.player_pos,
-                        'goal': self.grid.goal_pos
-                    }
-                    # Pass the dictionary as a single argument
-                    # self.path = dijkstras(grid_data)  # Store the path
-                    # if self.path:
-                    #     print(f"Path found: {self.path}")
-                    # else:
-                    #     print("No path found!")
-
-                    # You can keep the existing binary save/subprocess code if needed
+                    # Save the current grid state to CSV
                     self.save_to_csv('grid_state.csv')
                     import subprocess
                     import os
@@ -197,7 +184,18 @@ class GridWorld:
                         print(f"Error running pathfinding.exe: {e}")
                     except FileNotFoundError:
                         print(f"pathfinding.exe not found at: {exe_path}")
-        
+
+                    # Read the path from the CSV file
+                    path = []
+                    with open('path.csv', 'r') as f:
+                        for line in f:
+                            x, y = map(int, line.strip().split(','))
+                            path.append((x, y))
+                    
+                    # Store the path for drawing, ensuring each position is its own line
+                    # Note: have to switch the indices for some reason, still working on it
+                    self.path = [(x, y) for y, x in path]
+                    
         if current_time - self.last_move_time < self.move_cooldown:
             return
             
