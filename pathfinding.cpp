@@ -11,9 +11,9 @@ using namespace std;
 void dijkstra(const vector<vector<int>>& grid, int start, int end) {
     int rows = grid.size();
     int cols = grid[0].size();
-    vector<vector<int> > dist(rows, vector<int>(cols, numeric_limits<int>::max()));
-    vector<vector<bool> > visited(rows, vector<bool>(cols, false));
-    priority_queue<pair<int, pair<int, int> >, vector<pair<int, pair<int, int> > >, greater<pair<int, pair<int, int> > > > pq;
+    vector<vector<int>> dist(rows, vector<int>(cols, numeric_limits<int>::max()));
+    vector<vector<bool>> visited(rows, vector<bool>(cols, false));
+    priority_queue<pair<int, pair<int, int>>, vector<pair<int, pair<int, int> > >, greater<pair<int, pair<int, int> > > > pq;
     vector<vector<pair<int, int>>> prev(rows, vector<pair<int, int>>(cols, {-1, -1})); // To store the path
 
     // Convert start and end from 1D to 2D coordinates
