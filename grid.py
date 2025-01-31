@@ -6,6 +6,7 @@ from enum import Enum
 import numpy as np
 from pathfinding import dijkstras
 import os
+import csv
 
 @dataclass
 class CellState:
@@ -185,8 +186,11 @@ class GridWorld:
                     except FileNotFoundError:
                         print(f"pathfinding.exe not found at: {exe_path}")
 
+                    self.plot_priority_queue()
+
                     # Read the path from the CSV file
                     path = []
+
                     with open('path.csv', 'r') as f:
                         for line in f:
                             x, y = map(int, line.strip().split(','))
@@ -275,6 +279,31 @@ class GridWorld:
             # Read data
             data = np.fromfile(f, dtype=np.float64)
             self.grid.grid = data.reshape((rows, cols))
+
+    def plot_priority_queue(self):
+        with open('priority_queue.csv', 'r') as file:
+            reader = csv.reader(file)
+            previous_pairs = []  # Store previous pairs to erase them
+            for row in reader:
+                # Extract pairs from the row, ensuring each pair is treated as a single tuple
+                pairs = [(int(row[i]), int(row[i + 1])) for i in range(0, len(row), 2)]  # Create tuples from pairs
+                
+                # Erase previous row's nodes by drawing black circles
+                #for prev_x, prev_y in previous_pairs:
+                #    prev_circle_x = prev_x * self.cell_size + self.cell_size // 2
+                #    prev_circle_y = prev_y * self.cell_size + self.cell_size // 2
+                #    pygame.draw.circle(self.screen, (0, 0, 0), (prev_circle_y, prev_circle_x), self.cell_size // 4)
+
+                # Plot each pair as a pink dot
+                for x, y in pairs:
+                    circle_x = x * self.cell_size + self.cell_size // 2
+                    circle_y = y * self.cell_size + self.cell_size // 2
+                    pygame.draw.circle(self.screen, (255, 105, 180), (circle_y, circle_x), self.cell_size // 4)
+
+                previous_pairs = pairs  # Update previous pairs for the next iteration
+                
+                pygame.display.flip()  # Update the display
+                pygame.time.delay(20)  # Display each row for 1 second
 
 # main
 if __name__ == "__main__":

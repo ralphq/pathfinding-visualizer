@@ -13,7 +13,7 @@ void dijkstra(const vector<vector<int>>& grid, int start, int end) {
     int cols = grid[0].size();
     vector<vector<int>> dist(rows, vector<int>(cols, numeric_limits<int>::max()));
     vector<vector<bool>> visited(rows, vector<bool>(cols, false));
-    priority_queue<pair<int, pair<int, int>>, vector<pair<int, pair<int, int> > >, greater<pair<int, pair<int, int> > > > pq;
+    priority_queue<pair<int, pair<int, int>>, vector<pair<int, pair<int, int>>>, greater<pair<int, pair<int, int>>>> pq;
     vector<vector<pair<int, int>>> prev(rows, vector<pair<int, int>>(cols, {-1, -1})); // To store the path
 
     // Convert start and end from 1D to 2D coordinates
@@ -33,14 +33,32 @@ void dijkstra(const vector<vector<int>>& grid, int start, int end) {
 
     vector<pair<int, int> > directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
+    ofstream pqFile("priority_queue.csv"); // Open a file to save the priority queue state
+    if (!pqFile.is_open()) {
+        cout << "Unable to open file for writing priority queue!" << endl; // Error handling
+        return;
+    }
+
     while (!pq.empty()) {
-        auto [currentDist, current] = pq.top();
+        auto current = pq.top(); // Get the top element
+        int currentDist = current.first; // Access the distance
+        auto currentCoords = current.second; // Access the coordinates
+        int x = currentCoords.first; // Get x coordinate
+        int y = currentCoords.second; // Get y coordinate
         pq.pop();
-        int x = current.first;
-        int y = current.second;
 
         if (visited[x][y]) continue;
         visited[x][y] = true;
+
+        // Save the current state of the priority queue
+        priority_queue<pair<int, pair<int, int>>, vector<pair<int, pair<int, int>>>, greater<pair<int, pair<int, int>>>> tempPQ = pq; // Create a temporary copy of the priority queue
+        pqFile << x << "," << y; // Save the current node without parentheses
+        while (!tempPQ.empty()) {
+            auto [dist, coords] = tempPQ.top();
+            tempPQ.pop();
+            pqFile << "," << coords.first << "," << coords.second; // Save the rest of the queue without parentheses
+        }
+        pqFile << endl; // New line for the next state
 
         // If we reached the end node
         if (x == endRow && y == endCol) {
@@ -71,6 +89,7 @@ void dijkstra(const vector<vector<int>>& grid, int start, int end) {
                 cout << "Unable to open file for writing!" << endl; // Error handling
             }
 
+            pqFile.close(); // Close the priority queue file
             return;
         }
 
@@ -90,6 +109,7 @@ void dijkstra(const vector<vector<int>>& grid, int start, int end) {
     }
 
     cout << "No path found!" << endl;
+    pqFile.close(); // Close the priority queue file
 }
 
 int main() {
