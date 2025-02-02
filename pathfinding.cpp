@@ -62,7 +62,7 @@ void dijkstra(const vector<vector<int>>& grid, int start, int end) {
 
         // If we reached the end node
         if (x == endRow && y == endCol) {
-            cout << "Shortest path distance: " << currentDist << endl;
+            //cout << "Shortest path distance: " << currentDist << endl;
 
             // Reconstruct the path
             vector<pair<int, int>> path;
@@ -71,11 +71,13 @@ void dijkstra(const vector<vector<int>>& grid, int start, int end) {
             }
             reverse(path.begin(), path.end());
 
+            /*
             cout << "Path: ";
             for (const auto& p : path) {
                 cout << "(" << p.first << ", " << p.second << ") ";
             }
             cout << endl;
+            */
 
             // Save path to CSV
             ofstream outFile("path.csv"); // Open a file to save the path
@@ -84,9 +86,9 @@ void dijkstra(const vector<vector<int>>& grid, int start, int end) {
                     outFile << p.first << "," << p.second << endl; // Write each coordinate to the file
                 }
                 outFile.close(); // Close the file
-                cout << "Path saved to path.csv" << endl; // Confirmation message
+                //cout << "Path saved to path.csv" << endl; // Confirmation message
             } else {
-                cout << "Unable to open file for writing!" << endl; // Error handling
+                //cout << "Unable to open file for writing!" << endl; // Error handling
             }
 
             pqFile.close(); // Close the priority queue file

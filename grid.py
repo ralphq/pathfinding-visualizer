@@ -61,11 +61,13 @@ class GridWorld:
         pygame.display.set_caption("GridWorld")
         
         # Grid dimensions
-        cols = width // cell_size
-        rows = height // cell_size
+        self.grid_height = height - 100  # Leave space for buttons
+        self.grid_width = width
+        self.cols = width // cell_size
+        self.rows = self.grid_height // cell_size
         
         # Initialize grid
-        self.grid = Grid(cols, rows)
+        self.grid = Grid(self.cols, self.rows)
         
         # Colors mapping
         self.colors = {
@@ -81,7 +83,6 @@ class GridWorld:
         self.grid.player_pos = self.grid.get_random_pos()
         self.grid.goal_pos = self.grid.get_random_pos()
         self.grid.update_grid_state()
-        # self.print_grid()
         
         # Game clock
         self.clock = pygame.time.Clock()
@@ -89,9 +90,9 @@ class GridWorld:
         self.last_move_time = 0
         
         # Button properties
-        self.button_height = 40
+        self.button_height = 50  # Height for the button area
         self.button_width = 120
-        self.button_margin = 20
+        self.button_margin = 25
         self.button_color = (150, 150, 150)
         self.button_hover_color = (180, 180, 180)
         self.button_font = pygame.font.Font(None, 32)
@@ -129,8 +130,8 @@ class GridWorld:
 
         # Draw grid lines
         for x in range(0, self.width, self.cell_size):
-            pygame.draw.line(self.screen, self.grid_color, (x, 0), (x, self.height))
-        for y in range(0, self.height, self.cell_size):
+            pygame.draw.line(self.screen, self.grid_color, (x, 0), (x, self.grid_height))
+        for y in range(0, self.grid_height, self.cell_size):
             pygame.draw.line(self.screen, self.grid_color, (0, y), (self.width, y))
             
         # Draw player as circle (on top of the cell)
@@ -138,8 +139,8 @@ class GridWorld:
         player_y = self.grid.player_pos[1] * self.cell_size + self.cell_size // 2
         pygame.draw.circle(self.screen, self.colors[self.grid.states.PLAYER], 
                          (player_x, player_y), self.cell_size // 3)
-        
-        # Draw buttons
+
+        # Draw buttons in the bottom section
         mouse_pos = pygame.mouse.get_pos()
         for button, text in zip(self.buttons, self.button_texts):
             color = self.button_hover_color if button.collidepoint(mouse_pos) else self.button_color
@@ -199,6 +200,11 @@ class GridWorld:
                     # Store the path for drawing, ensuring each position is its own line
                     # Note: have to switch the indices for some reason, still working on it
                     self.path = [(x, y) for y, x in path]
+
+                    # Delete the CSV files after processing
+                    os.remove('path.csv')
+                    os.remove('grid_state.csv')
+                    os.remove('priority_queue.csv')
                     
         if current_time - self.last_move_time < self.move_cooldown:
             return
@@ -287,12 +293,13 @@ class GridWorld:
             for row in reader:
                 # Extract pairs from the row, ensuring each pair is treated as a single tuple
                 pairs = [(int(row[i]), int(row[i + 1])) for i in range(0, len(row), 2)]  # Create tuples from pairs
-                
+
                 # Erase previous row's nodes by drawing black circles
-                #for prev_x, prev_y in previous_pairs:
-                #    prev_circle_x = prev_x * self.cell_size + self.cell_size // 2
-                #    prev_circle_y = prev_y * self.cell_size + self.cell_size // 2
-                #    pygame.draw.circle(self.screen, (0, 0, 0), (prev_circle_y, prev_circle_x), self.cell_size // 4)
+                #if previous_pairs:
+                #    for x, y in previous_pairs:
+                #        circle_x = x * self.cell_size + self.cell_size // 2
+                #        circle_y = y * self.cell_size + self.cell_size // 2
+                #        pygame.draw.circle(self.screen, (0, 0, 0), (circle_y, circle_x), self.cell_size // 4)
 
                 # Plot each pair as a pink dot
                 for x, y in pairs:
