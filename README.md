@@ -22,8 +22,8 @@ class CellState:
     GOAL: int = 2
     PLAYER: int = 3
 ```
-`pathfinding.exe` is run at this point.
-3. The pathfinding executable reads in grid_state.csv and returns two csv files:
+
+3. The pathfinding executable is run and reads in grid_state.csv and returns two csv files:
 
    `priority_queue.csv` stores the values of priority_queue at each iteration of the requested algorithm in a row.
 
