@@ -23,10 +23,10 @@ class CellState:
     PLAYER: int = 3
 ```
 `pathfinding.exe` is run at this point.
-3. The pathfinding executable reads in grid_state.csv and returns two csv files
+3. The pathfinding executable reads in grid_state.csv and returns two csv files:
 
-`priority_queue.csv` stores the values of priority_queue at each iteration of the requested algorithm in a row
+   `priority_queue.csv` stores the values of priority_queue at each iteration of the requested algorithm in a row.
 
-`path.csv` contains the final path returned by the algorithm, where each *node* occupies a row
+   `path.csv` contains the final path returned by the algorithm, where each *node* occupies a row.
 
 3. `grid.py` reads in the aforementioned csv files and plots the former in *pink* iteratively until the end node is found, at which point the latter is plotted in *blue.*
