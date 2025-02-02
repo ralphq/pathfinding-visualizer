@@ -288,7 +288,6 @@ class GridWorld:
         # save to CSV file
         np.savetxt(filename, self.grid.grid, delimiter=",", fmt='%d')
 
-
     def plot_priority_queue(self):
         with open('priority_queue.csv', 'r') as file:
             reader = csv.reader(file)
