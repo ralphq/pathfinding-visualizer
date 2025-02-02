@@ -7,7 +7,10 @@ import numpy as np
 from pathfinding import dijkstras
 import os
 import csv
+import subprocess
+import os
 
+# dataclass for each node in grid
 @dataclass
 class CellState:
     EMPTY: int = 0
@@ -15,6 +18,15 @@ class CellState:
     GOAL: int = 2
     PLAYER: int = 3
 
+"""
+Grid class is for the grid itself, but does not handle the 
+pygame window at all (see GridWorld). It has methods for
+
+- initializing grid
+- generating pseudo-randomized walls
+- creating random positions (used for start and end nodes)
+- updating grid state (called when "New Grid" button is pressed)
+"""
 class Grid:
     def __init__(self, cols, rows):
         self.cols = cols
@@ -25,7 +37,7 @@ class Grid:
         self.goal_pos = None
     
     def generate_walls(self):
-        self.grid.fill(self.states.EMPTY)  # Clear grid
+        self.grid.fill(self.states.EMPTY)  # clear grid
         num_wall_blocks = (self.cols * self.rows) // 25
         
         for _ in range(num_wall_blocks):
@@ -44,15 +56,29 @@ class Grid:
                 return [x, y]
 
     def update_grid_state(self):
-        # Clear previous player and goal positions
+        # clear previous player and goal positions
         self.grid[self.grid == self.states.PLAYER] = self.states.EMPTY
         self.grid[self.grid == self.states.GOAL] = self.states.EMPTY
-        # Set new positions
+        # set new positions
         self.grid[self.goal_pos[1], self.goal_pos[0]] = self.states.GOAL
         self.grid[self.player_pos[1], self.player_pos[0]] = self.states.PLAYER
 
+"""
+The GridWorld class wraps a Grid, and is used for rendering and handling user input
+with pygame. It has methods for
+
+- pygame window 
+- handling user input
+    - generating new grid
+    - calling pathfinding executable
+- saving to/reading from csv files
+
+"""
 class GridWorld:
     def __init__(self, width=800, height=600, cell_size=25):
+        """
+        Class attributes for pygame window
+        """
         pygame.init()
         self.width = width
         self.height = height
@@ -60,44 +86,53 @@ class GridWorld:
         self.screen = pygame.display.set_mode((width, height))
         pygame.display.set_caption("GridWorld")
         
-        # Grid dimensions
-        self.grid_height = height - 100  # Leave space for buttons
+        # grid dimensions
+        self.grid_height = height - 100  # space for buttons
         self.grid_width = width
         self.cols = width // cell_size
         self.rows = self.grid_height // cell_size
         
-        # Initialize grid
+        # initialize grid
         self.grid = Grid(self.cols, self.rows)
         
-        # Colors mapping
+        # game clock
+        self.clock = pygame.time.Clock()
+        self.move_cooldown = 200
+        self.last_move_time = 0
+        
+        """
+        Class attributes for drawing grid
+        """
+        # colors mapping
         self.colors = {
-            self.grid.states.EMPTY: (0, 0, 0),      # Background
-            self.grid.states.WALL: (100, 100, 100),  # Wall
-            self.grid.states.GOAL: (0, 255, 0),      # Goal
-            self.grid.states.PLAYER: (255, 0, 0)     # Player
+            self.grid.states.EMPTY: (0, 0, 0),      # background
+            self.grid.states.WALL: (100, 100, 100),  # wall
+            self.grid.states.GOAL: (0, 255, 0),      # goal
+            self.grid.states.PLAYER: (255, 0, 0)     # player
         }
         self.grid_color = (50, 50, 50)
         
-        # Initialize game state
+        # initialize game state
         self.grid.generate_walls()
         self.grid.player_pos = self.grid.get_random_pos()
         self.grid.goal_pos = self.grid.get_random_pos()
         self.grid.update_grid_state()
         
-        # Game clock
-        self.clock = pygame.time.Clock()
-        self.move_cooldown = 200
-        self.last_move_time = 0
-        
-        # Button properties
-        self.button_height = 50  # Height for the button area
+        # store the path here
+        self.path = []  
+
+        """
+        Class attributes for buttons
+        """
+        # button properties
+        self.button_height = 50  # height for button area
         self.button_width = 120
         self.button_margin = 25
         self.button_color = (150, 150, 150)
         self.button_hover_color = (180, 180, 180)
         self.button_font = pygame.font.Font(None, 32)
         
-        # Define buttons (x, y, width, height, text)
+        # define buttons (x, y, width, height, text)
         self.buttons = [
             pygame.Rect(self.button_margin, height - self.button_height - self.button_margin, 
                        self.button_width, self.button_height),
@@ -106,10 +141,10 @@ class GridWorld:
         ]
         self.button_texts = ["New Grid", "Dijkstra's"]
 
-        self.path = []  # Store the path here
+
 
     def draw_grid(self):
-        # Draw cells
+        # draw cells
         for y in range(self.grid.rows):
             for x in range(self.grid.cols):
                 cell_rect = pygame.Rect(
@@ -121,26 +156,26 @@ class GridWorld:
                 cell_state = self.grid.grid[y, x]
                 pygame.draw.rect(self.screen, self.colors[cell_state], cell_rect)
                 
-        # Draw path if it exists
+        # draw path if it exists
         for node in self.path:
             path_x, path_y = node
             path_circle_x = path_x * self.cell_size + self.cell_size // 2
             path_circle_y = path_y * self.cell_size + self.cell_size // 2
             pygame.draw.circle(self.screen, (0, 191, 255), (path_circle_x, path_circle_y), self.cell_size // 4)
 
-        # Draw grid lines
+        # draw grid lines
         for x in range(0, self.width, self.cell_size):
             pygame.draw.line(self.screen, self.grid_color, (x, 0), (x, self.grid_height))
         for y in range(0, self.grid_height, self.cell_size):
             pygame.draw.line(self.screen, self.grid_color, (0, y), (self.width, y))
             
-        # Draw player as circle (on top of the cell)
+        # draw player as circle (on top of the cell)
         player_x = self.grid.player_pos[0] * self.cell_size + self.cell_size // 2
         player_y = self.grid.player_pos[1] * self.cell_size + self.cell_size // 2
         pygame.draw.circle(self.screen, self.colors[self.grid.states.PLAYER], 
                          (player_x, player_y), self.cell_size // 3)
 
-        # Draw buttons in the bottom section
+        # draw buttons in the bottom section
         mouse_pos = pygame.mouse.get_pos()
         for button, text in zip(self.buttons, self.button_texts):
             color = self.button_hover_color if button.collidepoint(mouse_pos) else self.button_color
@@ -153,33 +188,26 @@ class GridWorld:
     def handle_input(self):
         current_time = pygame.time.get_ticks()
         
-        # Handle mouse clicks for buttons
+        # handle mouse clicks for buttons
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
-            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # Left click
+            elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:  # left click
                 mouse_pos = pygame.mouse.get_pos()
                 if self.buttons[0].collidepoint(mouse_pos):
-                    print("New Grid button clicked")  # Add debug print
-                    self.grid.grid.fill(self.grid.states.EMPTY)  # Clear the grid first
-                    self.grid.generate_walls()
-                    self.grid.player_pos = self.grid.get_random_pos()
-                    self.grid.goal_pos = self.grid.get_random_pos()
-                    self.grid.update_grid_state()
-                    self.path = []  # Clear the path when a new grid is generated
-                    #self.print_grid()
+                    print("New Grid button clicked")  # debug print
+                    self.reset_grid()  # method to reset grid and positions
                 elif self.buttons[1].collidepoint(mouse_pos):
                     print("Dijkstra's button clicked")
-                    # Save the current grid state to CSV
+                    # save the current grid state to CSV
                     self.save_to_csv('grid_state.csv')
-                    import subprocess
-                    import os
                     
-                    # Get the current directory and construct full path to pathfinding.exe
+                    # get the current directory and construct full path to pathfinding.exe
                     current_dir = os.path.dirname(os.path.abspath(__file__))
                     exe_path = os.path.join(current_dir, 'pathfinding.exe')
                     
+                    # running cpp file
                     try:
                         subprocess.run([exe_path], check=True)
                     except subprocess.CalledProcessError as e:
@@ -187,21 +215,21 @@ class GridWorld:
                     except FileNotFoundError:
                         print(f"pathfinding.exe not found at: {exe_path}")
 
+                    # plot priority queue from csv file generated by pathfinding.cpp
                     self.plot_priority_queue()
 
-                    # Read the path from the CSV file
+                    # read the path from the CSV file
                     path = []
-
                     with open('path.csv', 'r') as f:
                         for line in f:
                             x, y = map(int, line.strip().split(','))
                             path.append((x, y))
                     
-                    # Store the path for drawing, ensuring each position is its own line
-                    # Note: have to switch the indices for some reason, still working on it
+                    # store the path for drawing, ensuring each position is its own line
+                    # note: have to switch the indices for some reason, still working on it
                     self.path = [(x, y) for y, x in path]
 
-                    # Delete the CSV files after processing
+                    # delete the CSV files after processing
                     os.remove('path.csv')
                     os.remove('grid_state.csv')
                     os.remove('priority_queue.csv')
@@ -225,26 +253,27 @@ class GridWorld:
         if keys[pygame.K_DOWN]:
             new_pos[1] += 1
             moved = True
-            
+        # check if the player has moved and if the new position is within grid bounds and not a wall
         if moved and (0 <= new_pos[0] < self.grid.cols and 
                      0 <= new_pos[1] < self.grid.rows and
                      self.grid.grid[new_pos[1], new_pos[0]] != self.grid.states.WALL):
+            # update the player's position to the new position
             self.grid.player_pos = new_pos
+            # update the last move time to the current time
             self.last_move_time = current_time
             
+            # check if the player has reached the goal position
             if self.grid.player_pos == self.grid.goal_pos:
-                self.grid.generate_walls()
-                self.grid.player_pos = self.grid.get_random_pos()
-                self.grid.goal_pos = self.grid.get_random_pos()
-                self.grid.update_grid_state()
-                #self.print_grid()
+                # reset grid and positions when the player reaches the goal
+                self.reset_grid()  # call to reset_grid method
             
+            # update the grid state to reflect the new player position
             self.grid.update_grid_state()
 
     def run(self):
         running = True
         while running:
-            # Remove the event handling from here since it's in handle_input()
+            # remove the event handling from here since it's in handle_input()
             self.handle_input()
             self.draw_grid()
             
@@ -253,64 +282,40 @@ class GridWorld:
             
         pygame.quit()
         sys.exit()
-
-    def print_grid(self):
-        # Print column numbers
-        print("\n")
-        print('   ', end='')  # Extra space for alignment
-        for x in range(self.grid.cols):
-            print(f'{x:2} ', end='')  # Added space after each number
-        print()  # newline
-        
-        # Print grid with row numbers
-        for y in range(self.grid.rows):
-            print(f'{y:2} ', end='')  # Row number with space
-            for x in range(self.grid.cols):
-                print(f'{self.grid.grid[y,x]:2} ', end='')  # Added consistent spacing
-            print()  # newline
-
+    
     def save_to_csv(self, filename):
-        """Save the current grid state to a CSV file."""
-        # Save to CSV file
+        """save the current grid state to a CSV file."""
+        # save to CSV file
         np.savetxt(filename, self.grid.grid, delimiter=",", fmt='%d')
 
-    def load_from_binary(self, filename):
-        """Load grid state from a binary file."""
-        # Read the file
-        with open(filename, 'rb') as f:
-            # Read header
-            header = np.fromfile(f, dtype=np.uint64, count=2)
-            rows, cols = header
-            
-            # Read data
-            data = np.fromfile(f, dtype=np.float64)
-            self.grid.grid = data.reshape((rows, cols))
 
     def plot_priority_queue(self):
         with open('priority_queue.csv', 'r') as file:
             reader = csv.reader(file)
-            previous_pairs = []  # Store previous pairs to erase them
+            previous_pairs = []  # store previous pairs to erase them
             for row in reader:
-                # Extract pairs from the row, ensuring each pair is treated as a single tuple
-                pairs = [(int(row[i]), int(row[i + 1])) for i in range(0, len(row), 2)]  # Create tuples from pairs
+                # extract pairs from the row, ensuring each pair is treated as a single tuple
+                pairs = [(int(row[i]), int(row[i + 1])) for i in range(0, len(row), 2)]  # create tuples from pairs
 
-                # Erase previous row's nodes by drawing black circles
-                #if previous_pairs:
-                #    for x, y in previous_pairs:
-                #        circle_x = x * self.cell_size + self.cell_size // 2
-                #        circle_y = y * self.cell_size + self.cell_size // 2
-                #        pygame.draw.circle(self.screen, (0, 0, 0), (circle_y, circle_x), self.cell_size // 4)
-
-                # Plot each pair as a pink dot
+                # plot each pair as a pink dot
                 for x, y in pairs:
                     circle_x = x * self.cell_size + self.cell_size // 2
                     circle_y = y * self.cell_size + self.cell_size // 2
                     pygame.draw.circle(self.screen, (255, 105, 180), (circle_y, circle_x), self.cell_size // 4)
 
-                previous_pairs = pairs  # Update previous pairs for the next iteration
+                previous_pairs = pairs  # update previous pairs for the next iteration
                 
-                pygame.display.flip()  # Update the display
-                pygame.time.delay(20)  # Display each row for 1 second
+                pygame.display.flip()  # update the display
+                pygame.time.delay(20)  # display each row for 1 second
+
+    def reset_grid(self):
+        """reset the grid and generate new player and goal positions."""
+        self.grid.grid.fill(self.grid.states.EMPTY)  # clear the grid first
+        self.grid.generate_walls()
+        self.grid.player_pos = self.grid.get_random_pos()
+        self.grid.goal_pos = self.grid.get_random_pos()
+        self.grid.update_grid_state()  # update grid state after resetting
+        self.path = []  # clear path when new grid button is pressed
 
 # main
 if __name__ == "__main__":
