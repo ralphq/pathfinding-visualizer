@@ -75,7 +75,7 @@ with pygame. It has methods for
 
 """
 class GridWorld:
-    def __init__(self, width=800, height=600, cell_size=25):
+    def __init__(self, width=800, height=800, cell_size=25):
         """
         Class attributes for pygame window
         """
@@ -137,11 +137,14 @@ class GridWorld:
             pygame.Rect(self.button_margin, height - self.button_height - self.button_margin, 
                        self.button_width, self.button_height),
             pygame.Rect(2 * self.button_margin + self.button_width, height - self.button_height - self.button_margin,
-                       self.button_width, self.button_height)
+                       self.button_width, self.button_height),
+            pygame.Rect(3 * self.button_margin + 2 * self.button_width, height - self.button_height - self.button_margin,
+                       self.button_width, self.button_height)                       
         ]
-        self.button_texts = ["New Grid", "Dijkstra's"]
+        self.button_texts = ["New Grid", "Dijkstra's", "A*"]
 
-
+        self.queue_color = (0, 0, 0) 
+        self.path_color = (0, 0, 0) 
 
     def draw_grid(self):
         # draw cells
@@ -161,7 +164,7 @@ class GridWorld:
             path_x, path_y = node
             path_circle_x = path_x * self.cell_size + self.cell_size // 2
             path_circle_y = path_y * self.cell_size + self.cell_size // 2
-            pygame.draw.circle(self.screen, (0, 191, 255), (path_circle_x, path_circle_y), self.cell_size // 4)
+            pygame.draw.circle(self.screen, self.path_color, (path_circle_x, path_circle_y), self.cell_size // 4)
 
         # draw grid lines
         for x in range(0, self.width, self.cell_size):
@@ -198,8 +201,7 @@ class GridWorld:
                 if self.buttons[0].collidepoint(mouse_pos):
                     print("New Grid button clicked")  # debug print
                     self.reset_grid()  # method to reset grid and positions
-                elif self.buttons[1].collidepoint(mouse_pos):
-                    print("Dijkstra's button clicked")
+                elif self.buttons[1].collidepoint(mouse_pos) or self.buttons[2].collidepoint(mouse_pos):
                     # save the current grid state to CSV
                     self.save_to_csv('grid_state.csv')
                     
@@ -209,7 +211,16 @@ class GridWorld:
                     
                     # running cpp file
                     try:
-                        subprocess.run([exe_path], check=True)
+                        if(self.buttons[1].collidepoint(mouse_pos)):
+                            print("Dijkstra's button clicked")
+                            subprocess.run([exe_path, 'false'], check=True)
+                            self.path_color = (0, 191, 255)  
+                            self.queue_color = (255, 105, 180)
+                        else:
+                            print("A* button clicked")
+                            subprocess.run([exe_path, 'true'], check=True)
+                            self.path_color = (255, 165, 0)  
+                            self.queue_color = (150, 100, 200) 
                     except subprocess.CalledProcessError as e:
                         print(f"Error running pathfinding.exe: {e}")
                     except FileNotFoundError:
@@ -300,7 +311,7 @@ class GridWorld:
                 for x, y in pairs:
                     circle_x = x * self.cell_size + self.cell_size // 2
                     circle_y = y * self.cell_size + self.cell_size // 2
-                    pygame.draw.circle(self.screen, (255, 105, 180), (circle_y, circle_x), self.cell_size // 4)
+                    pygame.draw.circle(self.screen, self.queue_color, (circle_y, circle_x), self.cell_size // 4)
 
                 previous_pairs = pairs  # update previous pairs for the next iteration
                 

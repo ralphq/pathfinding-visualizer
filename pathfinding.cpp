@@ -4,119 +4,132 @@
 #include <queue>
 #include <limits>
 #include <sstream>
-
+#include <cmath>
+#include <algorithm>
 
 using namespace std;
 
-void dijkstra(const vector<vector<int>>& grid, int start, int end) {
+void pathfinding(const vector<vector<int>>& grid, int start, int end, bool heuristic = false) {
     int rows = grid.size();
     int cols = grid[0].size();
     vector<vector<int>> dist(rows, vector<int>(cols, numeric_limits<int>::max()));
     vector<vector<bool>> visited(rows, vector<bool>(cols, false));
+    // priority queue holds pairs of (fScore, (x, y))
     priority_queue<pair<int, pair<int, int>>, vector<pair<int, pair<int, int>>>, greater<pair<int, pair<int, int>>>> pq;
     vector<vector<pair<int, int>>> prev(rows, vector<pair<int, int>>(cols, {-1, -1})); // to store the path
 
     // convert start and end from 1D to 2D coordinates
-    // ensure start is within bounds
     int startRow = start / cols;
-    // ensure start is within bounds
     int startCol = start % cols;
-    // ensure end is within bounds
     int endRow = end / cols;
-    // ensure end is within bounds
     int endCol = end % cols;
 
-    // check if start and end are valid
-    // invalid start or end position!
+    // check if start and end positions are valid (not on a wall)
     if (grid[startRow][startCol] == 1 || grid[endRow][endCol] == 1) {
         cout << "invalid start or end position!" << endl;
         return;
     }
 
-    dist[startRow][startCol] = 0;
-    pq.push({0, {startRow, startCol}});
+    // For a standard A* implementation, the starting f value is f = g + h.
+    // Here, g(start)=0 and h(start)= (if heuristic enabled) heuristicWeight * ManhattanDistance.
+    int heuristicWeight = heuristic ? 10 : 0; // Increased weight makes A* more aggressive
+    int startHeuristic = heuristic ? heuristicWeight * (abs(endRow - startRow) + abs(endCol - startCol)) : 0;
+    dist[startRow][startCol] = startHeuristic;
+    pq.push({startHeuristic, {startRow, startCol}});
 
-    vector<pair<int, int> > directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+    vector<pair<int, int>> directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
     // open a file to save the priority queue state
     ofstream pqFile("priority_queue.csv");
     if (!pqFile.is_open()) {
-        cout << "unable to open file for writing priority queue!" << endl; // error handling
+        cout << "unable to open file for writing priority queue!" << endl;
         return;
     }
 
+    // Initialize the heuristic grid if needed
+    vector<vector<int>> heuristicGrid(rows, vector<int>(cols, 0));
+    if (heuristic) {
+        // Calculate Euclidean distance for each cell
+        for (int i = 0; i < rows; ++i) {
+            for (int j = 0; j < cols; ++j) {
+                heuristicGrid[i][j] = sqrt(pow(endRow - i, 2) + pow(endCol - j, 2));
+            }
+        }
+    }
+
     while (!pq.empty()) {
-        auto current = pq.top(); // get the top element
-        int currentDist = current.first; // access the distance
-        auto currentCoords = current.second; // access the coordinates
-        int x = currentCoords.first; // get x coordinate
-        int y = currentCoords.second; // get y coordinate
+        auto current = pq.top();
+        int currentF = current.first;
+        auto [x, y] = current.second;
         pq.pop();
 
-        if (visited[x][y]) continue;
+        if (visited[x][y])
+            continue;
         visited[x][y] = true;
 
-        // save the current state of the priority queue
-        priority_queue<pair<int, pair<int, int>>, vector<pair<int, pair<int, int>>>, greater<pair<int, pair<int, int>>>> tempPQ = pq; // create a temporary copy of the priority queue
-        pqFile << x << "," << y; // save the current node without parentheses
+        // Save the current state of the priority queue to file.
+        priority_queue<pair<int, pair<int, int>>, vector<pair<int, pair<int, int>>>, greater<pair<int, pair<int, int>>>> tempPQ = pq;
+        pqFile << x << "," << y;
         while (!tempPQ.empty()) {
-            auto [dist, coords] = tempPQ.top();
+            auto [d, coords] = tempPQ.top();
             tempPQ.pop();
-            pqFile << "," << coords.first << "," << coords.second; // save the rest of the queue without parentheses
+            pqFile << "," << coords.first << "," << coords.second;
         }
-        pqFile << endl; // new line for the next state
+        pqFile << endl;
 
-        // if we reached the end node
+        // If reached the goal, reconstruct and save the path.
         if (x == endRow && y == endCol) {
-            //cout << "Shortest path distance: " << currentDist << endl;
-
-            // reconstruct the path
             vector<pair<int, int>> path;
             for (pair<int, int> at = {endRow, endCol}; at != make_pair(-1, -1); at = prev[at.first][at.second]) {
                 path.push_back(at);
             }
             reverse(path.begin(), path.end());
 
-            // save path to CSV
-            ofstream outFile("path.csv"); // open a file to save the path
+            ofstream outFile("path.csv");
             if (outFile.is_open()) {
                 for (const auto& p : path) {
-                    outFile << p.first << "," << p.second << endl; // write each coordinate to the file
+                    outFile << p.first << "," << p.second << endl;
                 }
-                outFile.close(); // close the file
-                //cout << "Path saved to path.csv" << endl; // confirmation message
-            } else {
-                //cout << "Unable to open file for writing!" << endl; // error handling
+                outFile.close();
             }
-
-            pqFile.close(); // close the priority queue file
+            pqFile.close();
             return;
         }
 
+        // Expand neighbors
         for (const auto& dir : directions) {
             int newX = x + dir.first;
             int newY = y + dir.second;
 
             if (newX >= 0 && newX < rows && newY >= 0 && newY < cols && grid[newX][newY] != 1) {
-                int newDist = currentDist + 1; // assuming each step has a cost of 1
-                if (newDist < dist[newX][newY]) {
-                    dist[newX][newY] = newDist;
-                    pq.push({newDist, {newX, newY}});
-                    prev[newX][newY] = {x, y}; // store the previous node
+                // gCost is the actual cost from the start (each move costs 1)
+                int gCost = (currentF - (heuristic ? heuristicWeight * heuristicGrid[x][y] : 0)) + 1;
+                // hCost is the Manhattan distance multiplied by our aggressive weight
+                int hCost = heuristic ? heuristicWeight * heuristicGrid[newX][newY] : 0;
+                int newF = gCost + hCost;
+                
+                if (newF < dist[newX][newY]) {
+                    dist[newX][newY] = newF;
+                    pq.push({newF, {newX, newY}});
+                    prev[newX][newY] = {x, y};
                 }
             }
         }
     }
 
     cout << "No path found!" << endl;
-    pqFile.close(); // close the priority queue file
+    pqFile.close();
 }
 
-int main() {
-    // load grid from CSV
+int main(int argc, char* argv[]) {
     ifstream file("grid_state.csv");
     string line;
     vector<vector<int>> grid;
+
+    bool heuristic = false; // default
+    if (argc > 1) {
+        heuristic = (string(argv[1]) == "true");
+    }
 
     while (getline(file, line)) {
         stringstream ss(line);
@@ -131,32 +144,29 @@ int main() {
     int startNode = -1; // starting node index
     int endNode = -1;   // ending node index
 
-    // find the indices of the elements with values 3 and 2
+    // Locate start (3) and end (2) in the grid
     for (int i = 0; i < grid.size(); ++i) {
         for (int j = 0; j < grid[i].size(); ++j) {
             if (grid[i][j] == 3) {
-                startNode = i * grid[i].size() + j; // convert to single index
+                startNode = i * grid[i].size() + j;
             }
             if (grid[i][j] == 2) {
-                endNode = i * grid[i].size() + j; // convert to single index
+                endNode = i * grid[i].size() + j;
             }
         }
     }
 
-    // check if startNode and endNode were found
     if (startNode == -1 || endNode == -1) {
         cout << "Start or end node not found!" << endl;
         return 1;
     }
 
-    // check if startNode and endNode are within the grid bounds
     if (startNode < 0 || startNode >= grid.size() * grid[0].size() || 
         endNode < 0 || endNode >= grid.size() * grid[0].size()) {
         cout << "Start or end node is out of bounds!" << endl;
         return 1;
     }
 
-    dijkstra(grid, startNode, endNode);
-
+    pathfinding(grid, startNode, endNode, heuristic);
     return 0;
 }
