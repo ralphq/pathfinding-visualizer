@@ -104,7 +104,7 @@ void pathfinding(const vector<vector<int>>& grid, int start, int end, bool heuri
             if (newX >= 0 && newX < rows && newY >= 0 && newY < cols && grid[newX][newY] != 1) {
                 // gCost is the actual cost from the start (each move costs 1)
                 int gCost = (currentF - (heuristic ? heuristicWeight * heuristicGrid[x][y] : 0)) + 1;
-                // hCost is the Manhattan distance multiplied by our aggressive weight
+                // hCost is the Euclidean distance multiplied by our aggressive weight
                 int hCost = heuristic ? heuristicWeight * heuristicGrid[newX][newY] : 0;
                 int newF = gCost + hCost;
                 
