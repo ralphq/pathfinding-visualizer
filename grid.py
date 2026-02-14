@@ -4,7 +4,6 @@ import sys
 import random
 from enum import Enum
 import numpy as np
-from pathfinding import dijkstras
 import os
 import csv
 import subprocess

@@ -12,7 +12,7 @@ using namespace std;
 void pathfinding(const vector<vector<int>>& grid, int start, int end, bool heuristic = false) {
     int rows = grid.size();
     int cols = grid[0].size();
-    vector<vector<int>> dist(rows, vector<int>(cols, numeric_limits<int>::max()));
+    vector<vector<int>> gScore(rows, vector<int>(cols, numeric_limits<int>::max())); // actual distance from start
     vector<vector<bool>> visited(rows, vector<bool>(cols, false));
     // priority queue holds pairs of (fScore, (x, y))
     priority_queue<pair<int, pair<int, int>>, vector<pair<int, pair<int, int>>>, greater<pair<int, pair<int, int>>>> pq;
@@ -30,12 +30,14 @@ void pathfinding(const vector<vector<int>>& grid, int start, int end, bool heuri
         return;
     }
 
-    // For a standard A* implementation, the starting f value is f = g + h.
-    // Here, g(start)=0 and h(start)= (if heuristic enabled) heuristicWeight * ManhattanDistance.
-    int heuristicWeight = heuristic ? 10 : 0; // Increased weight makes A* more aggressive
+    // For a standard A* implementation: f = g + h
+    // g(start) = 0 (no distance traveled yet)
+    // h(start) = heuristic estimate to goal
+    double heuristicWeight = heuristic ? 1 : 0.0; // Weight just above 1 for slightly aggressive A*
+    gScore[startRow][startCol] = 0;
     int startHeuristic = heuristic ? heuristicWeight * (abs(endRow - startRow) + abs(endCol - startCol)) : 0;
-    dist[startRow][startCol] = startHeuristic;
-    pq.push({startHeuristic, {startRow, startCol}});
+    int startF = 0 + startHeuristic; // f = g + h
+    pq.push({startF, {startRow, startCol}});
 
     vector<pair<int, int>> directions = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
 
@@ -102,14 +104,16 @@ void pathfinding(const vector<vector<int>>& grid, int start, int end, bool heuri
             int newY = y + dir.second;
 
             if (newX >= 0 && newX < rows && newY >= 0 && newY < cols && grid[newX][newY] != 1) {
-                // gCost is the actual cost from the start (each move costs 1)
-                int gCost = (currentF - (heuristic ? heuristicWeight * heuristicGrid[x][y] : 0)) + 1;
-                // hCost is the Euclidean distance multiplied by our aggressive weight
-                int hCost = heuristic ? heuristicWeight * heuristicGrid[newX][newY] : 0;
-                int newF = gCost + hCost;
-                
-                if (newF < dist[newX][newY]) {
-                    dist[newX][newY] = newF;
+                // Calculate new g-cost: current g-cost + 1 (cost of moving to neighbor)
+                int newG = gScore[x][y] + 1;
+
+                // Only process if we found a better path
+                if (newG < gScore[newX][newY]) {
+                    gScore[newX][newY] = newG;
+                    // Calculate h-cost (heuristic estimate to goal)
+                    int hCost = heuristic ? heuristicWeight * heuristicGrid[newX][newY] : 0;
+                    // f = g + h
+                    int newF = newG + hCost;
                     pq.push({newF, {newX, newY}});
                     prev[newX][newY] = {x, y};
                 }
