@@ -33,7 +33,7 @@ void pathfinding(const vector<vector<int>>& grid, int start, int end, bool heuri
     // For a standard A* implementation: f = g + h
     // g(start) = 0 (no distance traveled yet)
     // h(start) = heuristic estimate to goal
-    double heuristicWeight = heuristic ? 1 : 0.0; // Weight just above 1 for slightly aggressive A*
+    double heuristicWeight = heuristic ? 1 : 0.0; 
     gScore[startRow][startCol] = 0;
     int startHeuristic = heuristic ? heuristicWeight * (abs(endRow - startRow) + abs(endCol - startCol)) : 0;
     int startF = 0 + startHeuristic; // f = g + h
